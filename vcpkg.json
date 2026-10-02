@@ -1,0 +1,8 @@
+{
+  "name": "first-game",
+  "version-string": "0.1.0",
+  "dependencies": [
+    "sdl2"
+  ],
+  "builtin-baseline": "1b65197e9393b9ca312c95731ebf9c53d776b8d2"
+}

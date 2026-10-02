@@ -1,0 +1,14 @@
+# Carpeta de compilación y ejecutables
+build/
+bin/
+out/
+*.exe
+*.obj
+*.pdb
+
+# Carpetas de configuración local del editor
+.vscode/
+.vs/
+
+# Paquetes temporales de vcpkg
+vcpkg_installed/
