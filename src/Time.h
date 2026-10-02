@@ -1,6 +1,6 @@
 #pragma once
 #include <chrono>
-#include <algorithm> // 👈 1. Necesario para std::min
+#include <algorithm> // 👈 Necesario para std::min
 
 class Time {
   public:
@@ -11,7 +11,7 @@ class Time {
       // Calculamos la diferencia entre ahora y el fotograma anterior (en segundos)
       std::chrono::duration<float> elapsed = currentTime - lastTime;
       
-      // 👈 2. CLAMPING: Tomamos el menor valor entre el tiempo real y 0.05 segundos
+      // 👈 CLAMPING: Tomamos el menor valor entre el tiempo real y 0.05 segundos
       float rawDelta = elapsed.count();
       deltaTime = std::min(rawDelta, 0.05f);
 

@@ -12,7 +12,7 @@ class Game {
     void Clean();
 
   private:
-    // Métodos internos que se ejecutan en cada vuelta del bucle
+    // Métodos internos privados que se ejecutan en cada vuelta del bucle
     void HandleEvents();
     void Update();
     void Render();
