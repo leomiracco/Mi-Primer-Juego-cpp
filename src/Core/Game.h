@@ -1,5 +1,7 @@
 #pragma once
 #include <SDL.h>
+#include <memory>
+#include "ECS/GameObject.h" // 👈 Incluimos nuestro contenedor
 
 class Game {
   public:
@@ -21,8 +23,6 @@ class Game {
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
 
-    // Variables temporales de nuestro personaje cuadrado
-    float playerX = 50.0f;
-    float speed = 250.0f;
-    SDL_Rect playerRect = { 50, 250, 100, 100 };
+    // 👈 Ahora el personaje es una entidad formal completa
+    std::unique_ptr<GameObject> player = nullptr;
 };

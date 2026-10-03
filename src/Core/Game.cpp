@@ -1,5 +1,8 @@
 #include "Game.h"
 #include "Time.h" // 👈 1. Incluimos nuestro reloj propio
+#include "Components/Transform.h" // 👈 Traemos la posición
+#include "Components/SquareRenderer.h" // 👈 Traemos el dibujado
+#include "Components/Hero.h" // 👈 1. Incluimos el componente del héroe
 #include <iostream>
 
 bool Game::Init(const char* title, int width, int height) {
@@ -35,6 +38,24 @@ bool Game::Init(const char* title, int width, int height) {
     return false;
   }
 
+  // ==========================================
+  // ENSAMBLANDO NUESTRO GAMEOBJECT (ESTILO UNITY)
+  // ==========================================
+  player = std::make_unique<GameObject>("Player");
+
+  // 1. Le agregamos el componente de posición y tamaño
+  auto* transform = player->AddComponent<Transform>();
+  transform->x = 50.0f;
+  transform->y = 250.0f;
+  transform->width = 100;
+  transform->height = 100;
+
+  // 2. Le agregamos el componente que lo dibuja de verde
+  player->AddComponent<SquareRenderer>();
+
+  // Pieza 3: Cerebro / Movimiento 👈
+  player->AddComponent<Hero>();
+
   isRunning = true;
   return true;
 }
@@ -59,23 +80,19 @@ void Game::HandleEvents() {
 }
 
 void Game::Update() {
-  playerX += speed * Time::GetDeltaTime();
-  if (playerX > 800.0f) {
-    playerX = -100.0f;
-  }
-  playerRect.x = static_cast<int>(playerX);
+  // Actualizamos al GameObject (él se encarga de actualizar a todos sus componentes)
+  player->Update(Time::GetDeltaTime());
 }
 
 void Game::Render() {
-  // A. Fondo
+  // A. Pintamos el fondo azul oscuro
   SDL_SetRenderDrawColor(renderer, 30, 35, 45, 255);
   SDL_RenderClear(renderer);
 
-  // B. Jugador
-  SDL_SetRenderDrawColor(renderer, 50, 205, 50, 255);
-  SDL_RenderFillRect(renderer, &playerRect);
+  // B. 👈 ¡MIRA QUÉ LIMPIEZA! El GameObject se dibuja solo
+  player->Render(renderer);
 
-  // C. Presentar
+  // C. Presentamos en pantalla
   SDL_RenderPresent(renderer);
 }
 
