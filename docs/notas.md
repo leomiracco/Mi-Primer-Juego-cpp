@@ -1,0 +1,14 @@
+# Cómo funciona hasta ahora el motor (🔴🟢🟡🔵):
+
+> [1] Cómo está pensando la arquitectura:
+🟡Bueno. Vamos a tener el archivo main.cpp desde donde se inicia todo. Crea la Clase Game y comienza a ejecutar su método Init() y su método Run().
+🟡Luego, vamos a tener una Clase Game que tiene constructor vacío. Va a crear la ventana de la interfaz gráfica del juego, el nombre del mismo que aparece en la barra de título. Se crean métodos públicos y privados que van a manejar todo el juego, los métodos públicos van a ser, el nombre del juego, y las dimensiones de la ventana. Luego un método donde se ejecuta el loop del juego y otro método público para limpiar todo los objetos creados al finalizar la ventana. Los métodos privados son para detectar si el usuario a ingresado algún dato, a tocado alguna tecla o botón del joystick. Luego el update es el que se encarga de realizar los cambios del juego en tiempo de ejecución, como mover objetos, personajes, etc. Y finalmente, el render que es borrar toda la pantalla y volver a pintarla con todos los objetos en sus nuevas posiciones si es que se han movido. Y, además, se declara una variable privada de tipo GameObject que ahora mismo no existe, pero lo hará en el futuro inmediato. Esta Clase es la que organiza la orquesta, es como si fuese el Controller en el patrón de diseño Vista Modelo Controlador. Es el director de una orquesta. Es decir, si en algún momento nos vemos tentados a empezar a "tocar un instrumento" (por ejemplo, escribir cálculos de salto, vidas del personaje o colores dentro de Game), debes detenerte.
+🟡
+
+
+> [2] Se ejecuta el juego desde el archivo main.cpp
+Crea el objeto Game game. Dicha Clase tiene un constructor vacío. Luego ejecuta un método de la Clase Game que devuelve un booleando. game.Init("Mi Primer Juego C++", 800, 600).
+Luego, .
+Luego, Dentro de la Clase Game.h. Se crea una variable especial del tipo <std::unique_ptr> tiene su propio constructor, su propio destructor y sus propios métodos (como .get()). Aunque sea una clase/objeto, su único trabajo en la vida es gestionar un puntero (GameObject* ptr_interno = nullptr;). Si GameObject es una guitarra, std::unique_ptr es su estuche. con: <player = std::make_unique<GameObject>("Player");> --> Creas un objeto concreto: Compraste un estuche real y físico en tu habitación (player), pero aún no hay nada dentro, NO está la guitarra. Cuando en la Clase Game.cpp hacemos esto: <player = std::make_unique<GameObject>("Player");> ahí sí estamos creando la guitarra, es decir, estamos creando el constructor de GameOject cuyo propiedad nombre es "Player"
+Si esto devuelve true significa que salió todo bien.
+> [1]

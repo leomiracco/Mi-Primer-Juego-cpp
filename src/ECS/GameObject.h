@@ -33,8 +33,8 @@ class GameObject {
       newComponent->gameObject = this; // 👈 Le decimos al componente: "yo soy tu padre"
         
       T* rawPtr = newComponent.get(); // 👈 Guardamos el puntero directo para devolverlo
-      components.push_back(std::move(newComponent));
-        
+      components.push_back(std::move(newComponent)); // 👈 Acá std::move newComponent queda vacío nullptr
+       
       rawPtr->Init();
       return rawPtr;
     }

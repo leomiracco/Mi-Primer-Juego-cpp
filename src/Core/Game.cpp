@@ -57,6 +57,7 @@ bool Game::Init(const char* title, int width, int height) {
   player->AddComponent<Hero>();
 
   isRunning = true;
+  
   return true;
 }
 
