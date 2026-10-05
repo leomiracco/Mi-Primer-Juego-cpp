@@ -28,7 +28,16 @@ class SquareRenderer : public Component {
           transform->width,
           transform->height
         };
+        // Pintamos el escenario en este mismo instante
+        // con esta nueva información...
+
+        // 👉 Cambia el pincel: ahora lo moja en pintura verde.
         SDL_SetRenderDrawColor(renderer, r, g, b, a);
+
+        //👉 Pinta el cuadrado verde directamente sobre el lienzo oculto.
+        // En la memoria de la tarjeta gráfica, esos píxeles específicos
+        // (del 50 al 150) dejan de ser azules y pasan a ser verdes en
+        // ese preciso nanosegundo.
         SDL_RenderFillRect(renderer, &rect);
       }
     }

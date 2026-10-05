@@ -2,11 +2,18 @@
 #include "Time.h" // 👈 1. Incluimos nuestro reloj propio
 #include "Components/Transform.h" // 👈 Traemos la posición
 #include "Components/SquareRenderer.h" // 👈 Traemos el dibujado
-#include "Components/Hero.h" // 👈 1. Incluimos el componente del héroe
+#include "Components/PlayerController.h" // 👈 1. Incluimos el componente del héroe
+#include "Components/BoxCollider.h"
 #include <iostream>
 
+GameObject* Game::CreateGameObject(const std::string& name) {
+  auto newObj = std::make_unique<GameObject>(name);
+  GameObject* rawPtr = newObj.get();
+  gameObjects.push_back(std::move(newObj));
+  return rawPtr;
+}
+
 bool Game::Init(const char* title, int width, int height) {
-  
   // la ventana, los gráficos y los eventos del teclado/ratón  
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
     std::cerr << "Error iniciando SDL: " << SDL_GetError() << std::endl;
@@ -38,26 +45,39 @@ bool Game::Init(const char* title, int width, int height) {
     return false;
   }
 
-  // ==========================================
-  // ENSAMBLANDO NUESTRO GAMEOBJECT (ESTILO UNITY)
-  // ==========================================
-  player = std::make_unique<GameObject>("Player");
-
-  // 1. Le agregamos el componente de posición y tamaño
-  auto* transform = player->AddComponent<Transform>();
-  transform->x = 50.0f;
-  transform->y = 250.0f;
-  transform->width = 100;
-  transform->height = 100;
-
+  // ==============================================
+  // 1. CREAMOS AL JUGADOR (Verde y con controles)
+  // ==============================================
+  auto* player = CreateGameObject("Player");
+  auto* playerTransform = player->AddComponent<Transform>();
+  playerTransform->x = 100.0f;
+  playerTransform->y = 250.0f;
+  playerTransform->width = 80;
+  playerTransform->height = 80;
   // 2. Le agregamos el componente que lo dibuja de verde
   player->AddComponent<SquareRenderer>();
-
   // Pieza 3: Cerebro / Movimiento 👈
-  player->AddComponent<Hero>();
+  player->AddComponent<PlayerController>(); // Tiene teclado
+  player->AddComponent<BoxCollider>(); // 👈 Le damos cuerpo físico
+
+  // ==========================================
+  // 2. CREAMOS A UN ENEMIGO (Rojo y estático)
+  // ==========================================
+  auto* enemy = CreateGameObject("Enemy");
+  auto* enemyTransfom = enemy->AddComponent<Transform>();
+  enemyTransfom->x = 500.0f;
+  enemyTransfom->y = 250.0f;
+  enemyTransfom->width = 80;
+  enemyTransfom->height = 80;
+
+  auto* enemyRender = enemy->AddComponent<SquareRenderer>();
+  enemyRender->r = 220;
+  enemyRender->g = 50;
+  enemyRender->b = 50; // Le cambiamos el color a rojo
+  enemy->AddComponent<BoxCollider>(); // 👈 Le damos cuerpo físico
+  // 👈 ¡Fíjate que al enemigo NO le agregamos PlayerController!
 
   isRunning = true;
-  
   return true;
 }
 
@@ -81,19 +101,48 @@ void Game::HandleEvents() {
 }
 
 void Game::Update() {
-  // Actualizamos al GameObject (él se encarga de actualizar a todos sus componentes)
-  player->Update(Time::GetDeltaTime());
+  // 👈 Actualiza a TODOS los GameObjects del mundo de un solo golpe
+  for (auto& obj : gameObjects) {
+    obj->Update(Time::GetDeltaTime());
+  }
+
+  // 2. 👈 DETECCIÓN DE COLISIÓN EN TIEMPO REAL
+  auto* pCol = gameObjects[0]->GetComponent<BoxCollider>();
+  auto* eCol = gameObjects[1]->GetComponent<BoxCollider>();
+  auto* eRender = gameObjects[1]->GetComponent<SquareRenderer>();
+
+  if (pCol && eCol && eRender) {
+    if (pCol->CheckCollision(*eCol)) {
+      // ¡Chocaron! Cambiamos al enemigo a color AMARILLO de alerta
+      eRender->r = 255; eRender->g = 255; eRender->b = 0;
+    } else {
+      // No hay choque: vuelve a color ROJO
+      eRender->r = 220; eRender->g = 50; eRender->b = 50;
+    }
+  }
 }
 
 void Game::Render() {
-  // A. Pintamos el fondo azul oscuro
+  // A. Eligimos el color del pincel. Le decimos a la GPU
+  // Moja el pincel en pintura azul oscuro (R:30, G:35, B:45)
   SDL_SetRenderDrawColor(renderer, 30, 35, 45, 255);
+
+  // ESTA es la línea que realmente PINTA todo el fondo
+  // azul oscuro borrando todo lo que había en el ciclo
+  // anterior para que se vuelve a pintar el rectángulo
+  // verde!
   SDL_RenderClear(renderer);
 
-  // B. 👈 ¡MIRA QUÉ LIMPIEZA! El GameObject se dibuja solo
-  player->Render(renderer);
+  // B. 👈 Acá le pasa por argumento a la Clase GameObject
+  // y éste a la Clase SquareRenderer el pincel, para que
+  // pinte el rectángulo verde.
+  // 👈 Dibuja a TODOS los GameObjects del mundo
+  for (auto& obj : gameObjects) {
+    obj->Render(renderer);
+  }
 
-  // C. Presentamos en pantalla
+  // C. Presentamos en pantalla: Finalmente acá, vemos el
+  // nuevo escenario, con la nueva información en pantalla.
   SDL_RenderPresent(renderer);
 }
 

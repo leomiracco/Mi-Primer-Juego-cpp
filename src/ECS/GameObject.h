@@ -49,7 +49,7 @@ class GameObject {
           return target;
         }
       }
-      return nullptr; // No tiene ese componente
+      return nullptr; // No tiene ese componente. Puntero nulo.
     }
 
   private:
