@@ -1,34 +1,35 @@
 #pragma once
+#include <memory>
+#include <glm/glm.hpp>
 #include "Core/Scene.h"
+#include "Core/Mesh.h"
 #include "Components/Transform.h"
-#include "Components/SquareRenderer.h"
+#include "Components/MeshRenderer.h" // 👈 Usamos MeshRenderer
 #include "Components/BoxCollider.h"
 #include "Components/Bullet.h"
 
-// 👈 Fábrica desacoplada: sabe cómo armar entidades prefabricadas
 class Prefabs {
-public:
+  public:
     static GameObject* SpawnBullet(Scene* scene, float x, float y) {
-        if (scene == nullptr) return nullptr;
+      if (scene == nullptr) return nullptr;
 
-        // 1. Le pedimos a la escena del jugador que cree la entidad
-        auto* bullet = scene->CreateGameObject("Bullet");
+      // 1. Malla compartida: se crea en la GPU solo la primera vez que se dispara
+      // y todas las balas posteriores reutilizan el mismo Quad en VRAM
+      static std::shared_ptr<Mesh> bulletMesh = Mesh::CreateQuad();
 
-        // 2. Coordenadas de salida
-        auto* bulletTransform = bullet->AddComponent<Transform>();
-        bulletTransform->position.x = x;
-        bulletTransform->position.y = y;
-        bulletTransform->width = 24;
-        bulletTransform->height = 12;
+      // 2. Crear la entidad en la escena
+      auto* bullet = scene->CreateGameObject("Bullet");
 
-        // 3. Aspecto visual (Amarillo)
-        auto* bulletRender = bullet->AddComponent<SquareRenderer>();
-        bulletRender->r = 255; bulletRender->g = 255; bulletRender->b = 0;
+      // 3. Transform con constructor variádico (X, Y, Ancho, Alto)
+      bullet->AddComponent<Transform>(x, y, 24, 12);
 
-        // 4. Lógica de vuelo y cuerpo físico
-        bullet->AddComponent<Bullet>();
-        bullet->AddComponent<BoxCollider>();
+      // 4. MeshRenderer: Malla compartida + Color Amarillo brillante (RGBA en 0.0f - 1.0f)
+      bullet->AddComponent<MeshRenderer>(bulletMesh, glm::vec4(1.0f, 1.0f, 0.0f, 1.0f));
 
-        return bullet;
+      // 5. Componentes de vuelo y colisión
+      bullet->AddComponent<Bullet>();
+      bullet->AddComponent<BoxCollider>();
+
+      return bullet;
     }
 };

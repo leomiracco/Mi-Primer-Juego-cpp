@@ -62,6 +62,10 @@ bool Game::Init(const char* title, int width, int height) {
   glViewport(0, 0, width, height);
   SDL_GL_SetSwapInterval(1); // 1 = VSync activado
 
+  // 👉 ACTIVAR TRANSPARENCIA ALPHA (Para imágenes PNG)
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
   // 8. Mensaje de diagnóstico: Te dirá qué tarjeta gráfica está usando tu juego
   std::cout << "========================================" << std::endl;
   std::cout << " OpenGL inicializado con éxito!" << std::endl;

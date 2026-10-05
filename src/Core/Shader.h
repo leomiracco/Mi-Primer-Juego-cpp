@@ -50,6 +50,10 @@ class Shader {
     void SetVec4(const std::string& name, float x, float y, float z, float w) const {
       glUniform4f(glGetUniformLocation(ID, name.c_str()), x, y, z, w);
     }
+    
+    void SetInt(const std::string& name, int value) const {
+      glUniform1i(glGetUniformLocation(ID, name.c_str()), value);
+    }
 
   private:
     GLuint CompileShader(GLenum type, const char* source) {

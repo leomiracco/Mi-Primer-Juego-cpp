@@ -4,7 +4,8 @@
   "dependencies": [
     "sdl2",
     "glad",
-    "glm"
+    "glm",
+    "stb"
   ],
   "builtin-baseline": "1b65197e9393b9ca312c95731ebf9c53d776b8d2"
 }

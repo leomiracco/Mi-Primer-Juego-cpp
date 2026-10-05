@@ -9,11 +9,13 @@ find_package(SDL2 CONFIG REQUIRED)
 find_package(glad CONFIG REQUIRED)
 find_package(glm CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(Stb REQUIRED)
 
 # 2. Archivos fuente del ejecutable
 add_executable(FirstGame 
   src/main.cpp
   src/Core/Game.cpp
+  src/Core/Texture2D.cpp
 )
 
 # 3. La línea mágica: toma "src" como raíz de búsqueda para todos los includes
