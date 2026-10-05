@@ -4,6 +4,7 @@
 #include <string>
 #include <SDL.h>
 #include "ECS/GameObject.h"
+#include "Components/BoxCollider.h"
 
 // Declaración adelantada de Camera para evitar inclusiones circulares
 class Camera;
@@ -23,7 +24,10 @@ class Scene {
         }
       }
 
-    // 2. Limpieza diferida universal con iteradores
+      // 👉 2. PASO DE FÍSICA: Chequear colisiones entre colliders activos
+      CheckCollisions();
+
+      // 3. Limpieza diferida universal: remueve los objetos que murieron en este frame
       for (auto it = gameObjects.begin(); it != gameObjects.end(); ) {
         if (!(*it)->isAlive) {
           it = gameObjects.erase(it);
@@ -54,4 +58,26 @@ class Scene {
 
   protected:
     std::vector<std::unique_ptr<GameObject>> gameObjects;
+
+  private:
+    void CheckCollisions() {
+      // Comparamos pares únicos para no duplicar trabajo: (i, j) donde j = i + 1
+      for (size_t i = 0; i < gameObjects.size(); ++i) {
+        if (!gameObjects[i]->isAlive) continue;
+        auto* colA = gameObjects[i]->GetComponent<BoxCollider>();
+        if (!colA) continue;
+
+        for (size_t j = i + 1; j < gameObjects.size(); ++j) {
+          if (!gameObjects[j]->isAlive) continue;
+          auto* colB = gameObjects[j]->GetComponent<BoxCollider>();
+          if (!colB) continue;
+
+          // Si colisionan, disparamos el evento en AMBOS objetos
+          if (colA->CheckCollision(*colB)) {
+            gameObjects[i]->OnCollisionEnter(gameObjects[j].get());
+            gameObjects[j]->OnCollisionEnter(gameObjects[i].get());
+          }
+        }
+      }
+    }
 };

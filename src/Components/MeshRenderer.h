@@ -61,8 +61,8 @@ class MeshRenderer : public Component {
       model = glm::rotate(model, glm::radians(transform->rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
       model = glm::rotate(model, glm::radians(transform->rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
       model = glm::scale(model, glm::vec3(transform->width * transform->scale.x, 
-                                          transform->height * transform->scale.y, 
-                                          transform->scale.z));
+          transform->height * transform->scale.y, 
+          transform->scale.z));
 
       shader->SetMat4("model", model);
       shader->SetVec4("objectColor", color.r, color.g, color.b, color.a);

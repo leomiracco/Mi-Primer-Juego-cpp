@@ -20,6 +20,7 @@ class Level1Scene : public Scene {
 
       // 1. JUGADOR (Verde)
       auto* player = CreateGameObject("Player");
+      player->tag = "Player"; // 👈 Tag
       player->AddComponent<Transform>(100.0f, 250.0f, 80, 80);
       player->AddComponent<MeshRenderer>(quadMesh, glm::vec4(50.0f/255.0f, 205.0f/255.0f, 50.0f/255.0f, 1.0f));
       player->AddComponent<PlayerController>();
@@ -27,6 +28,7 @@ class Level1Scene : public Scene {
 
       // 2. ENEMIGO (Rojo)
       auto* enemy = CreateGameObject("Enemy");
+      enemy->tag = "Enemy";   // 👈 Tag
       enemy->AddComponent<Transform>(550.0f, 250.0f, 80, 80);
       enemy->AddComponent<MeshRenderer>(quadMesh, glm::vec4(0.85f, 0.2f, 0.2f, 1.0f));
       enemy->AddComponent<BoxCollider>();

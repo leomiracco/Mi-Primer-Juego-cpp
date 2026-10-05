@@ -2,35 +2,47 @@
 #include "ECS/Component.h"
 #include "ECS/GameObject.h"
 #include "Transform.h"
-#include <SDL.h>
+
+// Estructura de límites en coma flotante (precisión sub-pixel)
+struct BoundsF {
+    float x = 0.0f;
+    float y = 0.0f;
+    float width = 0.0f;
+    float height = 0.0f;
+};
 
 class BoxCollider : public Component {
   public:
     Transform* transform = nullptr;
+    
+    // Offset opcional por si queremos ajustar el hitbox más chico que el sprite
+    float offsetX = 0.0f;
+    float offsetY = 0.0f;
 
     void Init() override {
       transform = gameObject->GetComponent<Transform>();
     }
 
-    // Devuelve el rectángulo de impacto físico en base al Transform
-    SDL_Rect GetBounds() const {
+    BoundsF GetBounds() const {
       if (transform != nullptr) {
         return {
-          static_cast<int>(transform->position.x),
-          static_cast<int>(transform->position.y),
-          transform->width,
-          transform->height
+          transform->position.x + offsetX,
+          transform->position.y + offsetY,
+          transform->width * transform->scale.x,
+          transform->height * transform->scale.y
         };
       }
-      return { 0, 0, 0, 0 };
+      return { 0.0f, 0.0f, 0.0f, 0.0f };
     }
 
-    // Comprueba si esta caja física choca contra otra caja
+    // Algoritmo matemático AABB puro en float
     bool CheckCollision(const BoxCollider& other) const {
-      SDL_Rect a = GetBounds();
-      SDL_Rect b = other.GetBounds();
+      BoundsF a = GetBounds();
+      BoundsF b = other.GetBounds();
 
-      // 👈 Función nativa de SDL que calcula intersección matemática (AABB)
-      return SDL_HasIntersection(&a, &b) == SDL_TRUE;
+      return (a.x < b.x + b.width  &&
+              a.x + a.width > b.x  &&
+              a.y < b.y + b.height &&
+              a.y + a.height > b.y);
     }
 };

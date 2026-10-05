@@ -19,6 +19,7 @@ class Prefabs {
 
       // 2. Crear la entidad en la escena
       auto* bullet = scene->CreateGameObject("Bullet");
+      bullet->tag = "Bullet"; // 👈 Asignamos tag
 
       // 3. Transform con constructor variádico (X, Y, Ancho, Alto)
       bullet->AddComponent<Transform>(x, y, 24, 12);

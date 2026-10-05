@@ -13,6 +13,9 @@ class Component {
     virtual void Update(float deltaTime) {}
     virtual void Render() {}
 
+    // 👉 NUEVO: Evento llamado cuando este objeto choca con otro
+    virtual void OnCollisionEnter(GameObject* other) {}
+
     // Puntero de referencia hacia el GameObject dueño de este componente
     GameObject* gameObject = nullptr;
 };

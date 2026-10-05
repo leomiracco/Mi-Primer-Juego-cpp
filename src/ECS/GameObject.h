@@ -13,6 +13,7 @@ class GameObject {
     std::string name;
     bool isAlive = true; // 👈 1. Bandera de vida
     Scene* scene = nullptr; // 👈 2. Puntero a la escena a la que pertenece este objeto
+    std::string tag = "Untagged"; // 👈 Identificador rápido estilo Unity
 
     GameObject(const std::string& name = "GameObject") : name(name) {}
     ~GameObject() = default;
@@ -20,6 +21,13 @@ class GameObject {
     // 👈 2. Método para marcar para morir
     void Destroy() {
       isAlive = false;
+    }
+
+    // Propaga el choque a todos los componentes que tenga adentro
+    void OnCollisionEnter(GameObject* other) {
+      for (auto& component : components) {
+        component->OnCollisionEnter(other);
+      }
     }
 
     // 1. Ejecuta el Update de todos los componentes que tenga adentro

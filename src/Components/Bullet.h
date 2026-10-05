@@ -23,4 +23,13 @@ class Bullet : public Component {
         }
       }
     }
+
+    // 👉 REACCIÓN A LA COLISIÓN:
+    void OnCollisionEnter(GameObject* other) override {
+      // Si la bala toca a un enemigo: destruye al enemigo y se autodestruye
+      if (other->tag == "Enemy") {
+        other->Destroy();       // Destruye al enemigo
+        gameObject->Destroy();  // Destruye la bala
+      }
+    }
 };
