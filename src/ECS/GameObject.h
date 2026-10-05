@@ -30,21 +30,22 @@ class GameObject {
     }
 
     // 2. Ejecuta el Render de todos los componentes que sepan dibujarse
-    void Render(SDL_Renderer* renderer) {
+    void Render() {
       for (auto& component : components) {
-        component->Render(renderer);
+        component->Render();
       }
     }
 
-    // 3. Agregar un componente (como Unity: player.AddComponent<Transform>())
-    template <typename T>
-    T* AddComponent() {
-      auto newComponent = std::make_unique<T>();
-      newComponent->gameObject = this; // 👈 Le decimos al componente: "yo soy tu padre"
-        
-      T* rawPtr = newComponent.get(); // 👈 Guardamos el puntero directo para devolverlo
-      components.push_back(std::move(newComponent)); // 👈 Acá std::move newComponent queda vacío nullptr
-       
+    // 3. Agregar un componente con cualquier cantidad de parámetros (o ninguno)
+    template <typename T, typename... TArgs>
+    T* AddComponent(TArgs&&... args) {
+      // std::forward pasa exactamente los mismos parámetros al constructor de T
+      auto newComponent = std::make_unique<T>(std::forward<TArgs>(args)...);
+      newComponent->gameObject = this;
+    
+      T* rawPtr = newComponent.get();
+      components.push_back(std::move(newComponent));
+   
       rawPtr->Init();
       return rawPtr;
     }

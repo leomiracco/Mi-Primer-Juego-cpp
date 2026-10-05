@@ -33,10 +33,10 @@ class Scene {
       }
     }
 
-    virtual void Render(SDL_Renderer* renderer) {
+    virtual void Render() {
       for (auto& obj : gameObjects) {
         if (obj->isAlive) {
-          obj->Render(renderer);
+          obj->Render();
         }
       }
     }

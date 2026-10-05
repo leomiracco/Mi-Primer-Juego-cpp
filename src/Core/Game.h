@@ -21,7 +21,9 @@ class Game {
 
     bool isRunning = false;
     SDL_Window* window = nullptr;
-    SDL_Renderer* renderer = nullptr;
+    
+    // 👉 Adiós SDL_Renderer, bienvenido el contexto nativo de OpenGL
+    SDL_GLContext glContext = nullptr; 
 
     // 👈 Game solo conoce a la Escena activa, no a los personajes sueltos
     std::unique_ptr<Scene> currentScene = nullptr;

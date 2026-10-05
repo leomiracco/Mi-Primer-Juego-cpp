@@ -3,18 +3,20 @@
 #include "ECS/GameObject.h"
 #include "Transform.h"
 #include "Core/Vector3.h"
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 
 enum class CameraProjection {
-    Orthographic, // 2D (sin punto de fuga)
-    Perspective   // 3D (objetos lejanos se ven pequeños)
+  Orthographic, // 2D
+  Perspective   // 3D
 };
 
 class Camera : public Component {
   public:
     CameraProjection projection = CameraProjection::Orthographic;
-    float zoom = 1.0f; // 1.0f = tamaño normal, 2.0f = zoom in, 0.5f = zoom out
+    float zoom = 1.0f;
+    float fov = 45.0f; // Para 3D
 
-    // Ancho y alto de la resolución de la pantalla visible
     int screenWidth = 800;
     int screenHeight = 600;
 
@@ -27,15 +29,27 @@ class Camera : public Component {
       transform = gameObject->GetComponent<Transform>();
     }
 
-    // Convierte una posición del Mundo a la posición en la Pantalla del usuario
-    // Centra la cámara en el objetivo (estilo Unity/Cine)
-    Vector3 WorldToScreenPoint(const Vector3& worldPos) const {
-      Vector3 camPos = (transform != nullptr) ? transform->position : Vector3(0, 0, 0);
+    // Matriz de Proyección (la lente de la cámara)
+    glm::mat4 GetProjectionMatrix() const {
+      if (projection == CameraProjection::Orthographic) {
+        // En 2D: (0,0) arriba a la izquierda, igual que SDL
+        return glm::ortho(0.0f, static_cast<float>(screenWidth), 
+          static_cast<float>(screenHeight), 0.0f, 
+          -1000.0f, 1000.0f);
+      } else {
+        // En 3D: Perspectiva con profundidad humana y punto de fuga
+        float aspect = static_cast<float>(screenWidth) / static_cast<float>(screenHeight);
+        return glm::perspective(glm::radians(fov), aspect, 0.1f, 1000.0f);
+      }
+    }
 
-      // El centro de la pantalla es el punto de mira de la cámara
-      float screenX = (worldPos.x - camPos.x) * zoom + (screenWidth * 0.5f);
-      float screenY = (worldPos.y - camPos.y) * zoom + (screenHeight * 0.5f);
-
-      return Vector3(screenX, screenY, worldPos.z);
+    // Matriz de Vista (la posición en el mundo de la cámara)
+    glm::mat4 GetViewMatrix() const {
+      glm::mat4 view = glm::mat4(1.0f);
+      if (transform != nullptr) {
+        // La cámara invierte el movimiento: si la cámara va a la derecha, el mundo parece ir a la izquierda
+        view = glm::translate(view, -glm::vec3(transform->position.x, transform->position.y, transform->position.z));
+      }
+      return view;
     }
 };

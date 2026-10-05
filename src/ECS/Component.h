@@ -11,7 +11,7 @@ class Component {
     // Ciclo de vida que cualquier componente puede sobreescribir
     virtual void Init() {}
     virtual void Update(float deltaTime) {}
-    virtual void Render(SDL_Renderer* renderer) {}
+    virtual void Render() {}
 
     // Puntero de referencia hacia el GameObject dueño de este componente
     GameObject* gameObject = nullptr;

@@ -1,22 +1,33 @@
+#include <glad/glad.h> // 👈 1. SIEMPRE PRIMERO: GLAD conecta con los drivers de tu GPU
 #include "Game.h"
 #include "Time.h" // 👈 1. Incluimos nuestro reloj propio
 #include "Scenes/Level1Scene.h" // 👈 Único nivel a cargar
 #include <iostream>
 
 bool Game::Init(const char* title, int width, int height) {
-  // la ventana, los gráficos y los eventos del teclado/ratón  
+  // 1. Iniciar subsistema de video de SDL
   if (SDL_Init(SDL_INIT_VIDEO) != 0) {
     std::cerr << "Error iniciando SDL: " << SDL_GetError() << std::endl;
     return false;
   }
 
+  // 2. Configurar atributos de OpenGL Moderno (Versión 3.3 Core Profile)
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+  SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+
+  // 3. Activar Doble Buffer (para evitar parpadeos) y Buffer de Profundidad (Z-Buffer para 3D)
+  SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+  SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+
+  // 4. Crear ventana con la bandera de OpenGL activada
   window = SDL_CreateWindow(
     title,
     SDL_WINDOWPOS_CENTERED,
     SDL_WINDOWPOS_CENTERED,
     width,
     height,
-    SDL_WINDOW_SHOWN
+    SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN // 👈 Le dice a Windows que dibuje con la GPU
   );
 
   if (!window) {
@@ -24,18 +35,41 @@ bool Game::Init(const char* title, int width, int height) {
     return false;
   }
 
-  renderer = SDL_CreateRenderer(
-    window,
-    -1,
-    SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
-  );
+  // 👉 DETECCIÓN AUTOMÁTICA DE HERTZ DEL MONITOR
+  SDL_DisplayMode displayMode;
+  int displayIndex = SDL_GetWindowDisplayIndex(window);
+  if (SDL_GetCurrentDisplayMode(displayIndex, &displayMode) == 0 && displayMode.refresh_rate > 0) {
+    Time::SetTargetFPS(displayMode.refresh_rate);
+    std::cout << " Monitor detectado a: " << displayMode.refresh_rate << " Hz. Limitando a esa tasa." << std::endl;
+  } else {
+    Time::SetTargetFPS(60); // Respaldo seguro si no se puede leer el monitor
+  }
 
-  if (!renderer) {
-    std::cerr << "Error al crear el renderer: " << SDL_GetError() << std::endl;
+  // 5. Crear el Contexto de OpenGL sobre la ventana
+  glContext = SDL_GL_CreateContext(window);
+  if (!glContext) {
+    std::cerr << "Error al crear el contexto de OpenGL: " << SDL_GetError() << std::endl;
     return false;
   }
 
-  // 👈 Cargamos el Nivel 1 de forma limpia y polimórfica
+  // 6. Cargar todas las funciones de la GPU usando GLAD
+  if (!gladLoadGLLoader((GLADloadproc)SDL_GL_GetProcAddress)) {
+    std::cerr << "Error al inicializar GLAD!" << std::endl;
+    return false;
+  }
+
+  // 7. Área de dibujo (Viewport) y VSync (60 FPS estables)
+  glViewport(0, 0, width, height);
+  SDL_GL_SetSwapInterval(1); // 1 = VSync activado
+
+  // 8. Mensaje de diagnóstico: Te dirá qué tarjeta gráfica está usando tu juego
+  std::cout << "========================================" << std::endl;
+  std::cout << " OpenGL inicializado con éxito!" << std::endl;
+  std::cout << " GPU: " << glGetString(GL_RENDERER) << std::endl;
+  std::cout << " Versión OpenGL: " << glGetString(GL_VERSION) << std::endl;
+  std::cout << "========================================" << std::endl;
+
+  // 👈 9. Cargar escena
   currentScene = std::make_unique<Level1Scene>();
   currentScene->Init();
 
@@ -65,35 +99,34 @@ void Game::HandleEvents() {
 void Game::Update() {
   if (currentScene != nullptr) {
     currentScene->Update(Time::GetDeltaTime());
+
+    // Mostramos los FPS limpios leídos desde la clase Time
+    std::string title = "Mi Motor C++ | 2K | FPS: " + std::to_string(Time::GetFPS());
+    SDL_SetWindowTitle(window, title.c_str());
   }
 }
 
 void Game::Render() {
+  // 👉 1. Le decimos a la GPU: "Pinta el fondo con este color azul oscuro"
+  // En OpenGL los colores van de 0.0f a 1.0f (30/255 = ~0.11f)
+  glClearColor(30.0f / 255.0f, 35.0f / 255.0f, 45.0f / 255.0f, 1.0f);
+  
+  // 👉 2. Limpia el buffer de color y el buffer de profundidad (Z)
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
-  // A. Eligimos el color del pincel. Le decimos a la GPU
-  // Moja el pincel en pintura azul oscuro (R:30, G:35, B:45)
-  SDL_SetRenderDrawColor(renderer, 30, 35, 45, 255);
-
-  // ESTA es la línea que realmente PINTA todo el fondo
-  // azul oscuro borrando todo lo que había en el ciclo
-  // anterior para que se vuelve a pintar el rectángulo
-  // verde!
-  SDL_RenderClear(renderer);
-
+  // 👉 3. Renderizamos la escena
   if (currentScene != nullptr) {
-    currentScene->Render(renderer);
+    currentScene->Render();
   }
 
-  // C. Presentamos en pantalla: Finalmente acá, vemos el
-  // nuevo escenario, con la nueva información en pantalla.
-  SDL_RenderPresent(renderer);
+  // 👉 4. Intercambiamos el lienzo oculto con el visible (Doble Buffer)
+  SDL_GL_SwapWindow(window);
 }
 
 void Game::Clean() {
   currentScene.reset(); // Destruye la escena y todos
   // sus personajes antes de apagar SDL
-  if (renderer) SDL_DestroyRenderer(renderer);
+  if (glContext) SDL_GL_DeleteContext(glContext);
   if (window) SDL_DestroyWindow(window);
   SDL_Quit();
 }
