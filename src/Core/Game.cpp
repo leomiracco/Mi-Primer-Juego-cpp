@@ -1,17 +1,7 @@
 #include "Game.h"
 #include "Time.h" // 👈 1. Incluimos nuestro reloj propio
-#include "Components/Transform.h" // 👈 Traemos la posición
-#include "Components/SquareRenderer.h" // 👈 Traemos el dibujado
-#include "Components/PlayerController.h" // 👈 1. Incluimos el componente del héroe
-#include "Components/BoxCollider.h"
+#include "Scenes/Level1Scene.h" // 👈 Único nivel a cargar
 #include <iostream>
-
-GameObject* Game::CreateGameObject(const std::string& name) {
-  auto newObj = std::make_unique<GameObject>(name);
-  GameObject* rawPtr = newObj.get();
-  gameObjects.push_back(std::move(newObj));
-  return rawPtr;
-}
 
 bool Game::Init(const char* title, int width, int height) {
   // la ventana, los gráficos y los eventos del teclado/ratón  
@@ -45,37 +35,9 @@ bool Game::Init(const char* title, int width, int height) {
     return false;
   }
 
-  // ==============================================
-  // 1. CREAMOS AL JUGADOR (Verde y con controles)
-  // ==============================================
-  auto* player = CreateGameObject("Player");
-  auto* playerTransform = player->AddComponent<Transform>();
-  playerTransform->x = 100.0f;
-  playerTransform->y = 250.0f;
-  playerTransform->width = 80;
-  playerTransform->height = 80;
-  // 2. Le agregamos el componente que lo dibuja de verde
-  player->AddComponent<SquareRenderer>();
-  // Pieza 3: Cerebro / Movimiento 👈
-  player->AddComponent<PlayerController>(); // Tiene teclado
-  player->AddComponent<BoxCollider>(); // 👈 Le damos cuerpo físico
-
-  // ==========================================
-  // 2. CREAMOS A UN ENEMIGO (Rojo y estático)
-  // ==========================================
-  auto* enemy = CreateGameObject("Enemy");
-  auto* enemyTransfom = enemy->AddComponent<Transform>();
-  enemyTransfom->x = 500.0f;
-  enemyTransfom->y = 250.0f;
-  enemyTransfom->width = 80;
-  enemyTransfom->height = 80;
-
-  auto* enemyRender = enemy->AddComponent<SquareRenderer>();
-  enemyRender->r = 220;
-  enemyRender->g = 50;
-  enemyRender->b = 50; // Le cambiamos el color a rojo
-  enemy->AddComponent<BoxCollider>(); // 👈 Le damos cuerpo físico
-  // 👈 ¡Fíjate que al enemigo NO le agregamos PlayerController!
+  // 👈 Cargamos el Nivel 1 de forma limpia y polimórfica
+  currentScene = std::make_unique<Level1Scene>();
+  currentScene->Init();
 
   isRunning = true;
   return true;
@@ -101,28 +63,14 @@ void Game::HandleEvents() {
 }
 
 void Game::Update() {
-  // 👈 Actualiza a TODOS los GameObjects del mundo de un solo golpe
-  for (auto& obj : gameObjects) {
-    obj->Update(Time::GetDeltaTime());
-  }
-
-  // 2. 👈 DETECCIÓN DE COLISIÓN EN TIEMPO REAL
-  auto* pCol = gameObjects[0]->GetComponent<BoxCollider>();
-  auto* eCol = gameObjects[1]->GetComponent<BoxCollider>();
-  auto* eRender = gameObjects[1]->GetComponent<SquareRenderer>();
-
-  if (pCol && eCol && eRender) {
-    if (pCol->CheckCollision(*eCol)) {
-      // ¡Chocaron! Cambiamos al enemigo a color AMARILLO de alerta
-      eRender->r = 255; eRender->g = 255; eRender->b = 0;
-    } else {
-      // No hay choque: vuelve a color ROJO
-      eRender->r = 220; eRender->g = 50; eRender->b = 50;
-    }
+  if (currentScene != nullptr) {
+    currentScene->Update(Time::GetDeltaTime());
   }
 }
 
 void Game::Render() {
+
+
   // A. Eligimos el color del pincel. Le decimos a la GPU
   // Moja el pincel en pintura azul oscuro (R:30, G:35, B:45)
   SDL_SetRenderDrawColor(renderer, 30, 35, 45, 255);
@@ -133,12 +81,8 @@ void Game::Render() {
   // verde!
   SDL_RenderClear(renderer);
 
-  // B. 👈 Acá le pasa por argumento a la Clase GameObject
-  // y éste a la Clase SquareRenderer el pincel, para que
-  // pinte el rectángulo verde.
-  // 👈 Dibuja a TODOS los GameObjects del mundo
-  for (auto& obj : gameObjects) {
-    obj->Render(renderer);
+  if (currentScene != nullptr) {
+    currentScene->Render(renderer);
   }
 
   // C. Presentamos en pantalla: Finalmente acá, vemos el
@@ -147,6 +91,8 @@ void Game::Render() {
 }
 
 void Game::Clean() {
+  currentScene.reset(); // Destruye la escena y todos
+  // sus personajes antes de apagar SDL
   if (renderer) SDL_DestroyRenderer(renderer);
   if (window) SDL_DestroyWindow(window);
   SDL_Quit();

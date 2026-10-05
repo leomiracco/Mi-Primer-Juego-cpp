@@ -5,12 +5,22 @@
 #include <SDL.h>
 #include "Component.h"
 
+// 👈 1. Declaración adelantada de Scene (evita dependencias circulares)
+class Scene;
+
 class GameObject {
   public:
     std::string name;
+    bool isAlive = true; // 👈 1. Bandera de vida
+    Scene* scene = nullptr; // 👈 2. Puntero a la escena a la que pertenece este objeto
 
     GameObject(const std::string& name = "GameObject") : name(name) {}
     ~GameObject() = default;
+
+    // 👈 2. Método para marcar para morir
+    void Destroy() {
+      isAlive = false;
+    }
 
     // 1. Ejecuta el Update de todos los componentes que tenga adentro
     void Update(float deltaTime) {

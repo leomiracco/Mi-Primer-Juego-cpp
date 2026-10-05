@@ -24,4 +24,9 @@ class Input {
       if (GetKey(SDL_SCANCODE_W) || GetKey(SDL_SCANCODE_UP))   axis -= 1.0f;
     return axis;
   }
+
+  // 👈 4. Acción abstracta de disparo (Espacio)
+  static bool GetButtonFire() {
+    return GetKey(SDL_SCANCODE_SPACE);
+  }
 };

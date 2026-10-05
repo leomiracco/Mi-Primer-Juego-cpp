@@ -1,9 +1,7 @@
 #pragma once
 #include <SDL.h>
-#include <vector>
 #include <memory>
-#include <string>
-#include "ECS/GameObject.h" // 👈 Incluimos nuestro contenedor
+#include "Core/Scene.h" // 👈 Incluimos el contenedor de GameObjects Scene
 
 class Game {
   public:
@@ -15,9 +13,6 @@ class Game {
     void Run();
     void Clean();
 
-    // 👈 Fábrica para crear y registrar nuevos GameObjects en el mundo
-    GameObject* CreateGameObject(const std::string& name = "GameObject");
-
   private:
     // Métodos internos privados que se ejecutan en cada vuelta del bucle
     void HandleEvents();
@@ -28,6 +23,6 @@ class Game {
     SDL_Window* window = nullptr;
     SDL_Renderer* renderer = nullptr;
 
-    // 👈 La Escena: ahora el mundo guarda TODOS los GameObjects que existan
-    std::vector<std::unique_ptr<GameObject>> gameObjects;
+    // 👈 Game solo conoce a la Escena activa, no a los personajes sueltos
+    std::unique_ptr<Scene> currentScene = nullptr;
 };
