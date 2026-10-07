@@ -15,11 +15,13 @@ find_package(Stb REQUIRED)
 add_executable(FirstGame 
   src/main.cpp
   src/Core/Game.cpp
-  src/Core/Texture2D.cpp
+  src/Core/Scene.cpp
+  src/Core/CollisionSystem.cpp # 👈 NUEVO: El subsistema de físicas
+  src/Graphics/Texture2D.cpp # 👈 Ahora en Graphics
 )
 
 # 3. La línea mágica: toma "src" como raíz de búsqueda para todos los includes
-target_include_directories(FirstGame PRIVATE src)
+target_include_directories(FirstGame PRIVATE src ${Stb_INCLUDE_DIR})
 
 # 4. Enlazar librerías a FirstGame
 target_link_libraries(FirstGame PRIVATE 

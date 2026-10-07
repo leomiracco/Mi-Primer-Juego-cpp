@@ -27,6 +27,11 @@ class Texture2D {
     // Genera una textura blanca de 1x1 en memoria (para objetos sin imagen)
     static std::shared_ptr<Texture2D> GetWhiteTexture();
 
+    // 👉 Libera la textura blanca mientras OpenGL aún está vivo
+    static void UnloadWhiteTexture() {
+      whiteTexture.reset();
+    }
+
   private:
     static inline std::shared_ptr<Texture2D> whiteTexture = nullptr;
 };

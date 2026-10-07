@@ -1,7 +1,5 @@
 #include <glad/glad.h> // 👈 1. SIEMPRE PRIMERO: GLAD conecta con los drivers de tu GPU
 #include "Game.h"
-#include "Time.h" // 👈 1. Incluimos nuestro reloj propio
-#include "Scenes/Level1Scene.h" // 👈 Único nivel a cargar
 #include <iostream>
 
 bool Game::Init(const char* title, int width, int height) {
@@ -10,6 +8,9 @@ bool Game::Init(const char* title, int width, int height) {
     std::cerr << "Error iniciando SDL: " << SDL_GetError() << std::endl;
     return false;
   }
+
+  // 👉 INICIALIZAR EL SUBSISTEMA DE PANTALLA
+  Screen::Init(width, height);
 
   // 2. Configurar atributos de OpenGL Moderno (Versión 3.3 Core Profile)
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -20,14 +21,14 @@ bool Game::Init(const char* title, int width, int height) {
   SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
   SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-  // 4. Crear ventana con la bandera de OpenGL activada
+  // 4. Crear ventana
   window = SDL_CreateWindow(
     title,
     SDL_WINDOWPOS_CENTERED,
     SDL_WINDOWPOS_CENTERED,
     width,
     height,
-    SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN // 👈 Le dice a Windows que dibuje con la GPU
+    SDL_WINDOW_OPENGL | SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE // 👈 Ahora soporta redimensión
   );
 
   if (!window) {
@@ -73,21 +74,21 @@ bool Game::Init(const char* title, int width, int height) {
   std::cout << " Versión OpenGL: " << glGetString(GL_VERSION) << std::endl;
   std::cout << "========================================" << std::endl;
 
-  // 👈 9. Cargar escena
-  currentScene = std::make_unique<Level1Scene>();
-  currentScene->Init();
-
   isRunning = true;
   return true;
 }
 
 void Game::Run() {
+  // 👉 Sincroniza el reloj a cero en el microsegundo exacto de arranque
+  Time::Init();
+
   // El bucle principal que hace latir al juego
   while (isRunning) {
     Time::Update();   // 1. Medir tiempo
-    HandleEvents();   // 2. Escuchar teclado/ratón
-    Update();         // 3. Mover cosas con deltaTime
-    Render();         // 4. Dibujar en la GPU
+    Input::Update();  // 👈 NUEVO: Guarda el estado previo de las teclas
+    HandleEvents();   // 3. Escuchar teclado/ratón
+    Update();         // 4. Mover cosas con deltaTime
+    Render();         // 5. Dibujar en la GPU
   }
 }
 
@@ -97,39 +98,50 @@ void Game::HandleEvents() {
     if (event.type == SDL_QUIT) {
       isRunning = false;
     }
+    else if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED) {
+      int newW = event.window.data1;
+      int newH = event.window.data2;
+      Screen::SetSize(newW, newH);
+      glViewport(0, 0, newW, newH);
+    }
+
+    // 👉 ALIMENTA EL SUBSISTEMA DE INPUT (Rueda del ratón y eventos futuros)
+    Input::ProcessEvent(event);
   }
 }
 
 void Game::Update() {
-  if (currentScene != nullptr) {
-    currentScene->Update(Time::GetDeltaTime());
+  float dt = Time::GetDeltaTime();
+  SceneManager::Update(dt);
 
-    // Mostramos los FPS limpios leídos desde la clase Time
-    std::string title = "Mi Motor C++ | 2K | FPS: " + std::to_string(Time::GetFPS());
+  // 👉 ACTUALIZACIÓN ESTABILIZADA DE DIAGNÓSTICO (Cada 0.25s en vez de saturar en cada frame)
+  static float fpsTimer = 0.0f;
+  fpsTimer += Time::GetUnscaledDeltaTime();
+
+  if (fpsTimer >= 0.25f) {
+    std::string title = "Mi Motor C++ | FPS: " + std::to_string(Time::GetFPS());
     SDL_SetWindowTitle(window, title.c_str());
+    fpsTimer = 0.0f;
   }
 }
 
 void Game::Render() {
-  // 👉 1. Le decimos a la GPU: "Pinta el fondo con este color azul oscuro"
-  // En OpenGL los colores van de 0.0f a 1.0f (30/255 = ~0.11f)
-  glClearColor(30.0f / 255.0f, 35.0f / 255.0f, 45.0f / 255.0f, 1.0f);
-  
-  // 👉 2. Limpia el buffer de color y el buffer de profundidad (Z)
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  // 👉 El motor solo le pide al SceneManager que renderice el mundo
+  SceneManager::Render();
 
-  // 👉 3. Renderizamos la escena
-  if (currentScene != nullptr) {
-    currentScene->Render();
-  }
-
-  // 👉 4. Intercambiamos el lienzo oculto con el visible (Doble Buffer)
+  // Y presenta el fotograma en la ventana
   SDL_GL_SwapWindow(window);
 }
 
 void Game::Clean() {
-  currentScene.reset(); // Destruye la escena y todos
-  // sus personajes antes de apagar SDL
+  // 1. Destruye las escenas activas antes de apagar OpenGL
+  SceneManager::Clean();
+
+  // 2. 👉 Vacia todas las texturas y shaders de la VRAM
+  // mientras OpenGL aún vive
+  ResourceManager::Clean();
+
+  // 3. Apaga el contexto de OpenGL de forma 100% segura
   if (glContext) SDL_GL_DeleteContext(glContext);
   if (window) SDL_DestroyWindow(window);
   SDL_Quit();

@@ -39,14 +39,14 @@ class Mesh {
     // FÁBRICAS DE GEOMETRÍA ESTÁNDAR (Primitivas listas para usar)
     // ==============================================================
 
-    // 1. QUAD 2D: Plano unitario con origen (0,0) en la esquina superior izquierda
-    static std::shared_ptr<Mesh> CreateQuad() {
+    // 👉 1. QUAD CENTRADO: Pivote en el centro exacto (Ideal para naves, rotaciones en 360° y físicas)
+    static std::shared_ptr<Mesh> CreateQuadCentered() {
       std::vector<Vertex> vertices = {
-        // Posición                  Normal                 UV
-        { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f} }, // Arriba-Izquierda
-        { {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f} }, // Arriba-Derecha
-        { {1.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f} }, // Abajo-Derecha
-        { {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f} }  // Abajo-Izquierda
+        // Posición (-0.5 a +0.5)         Normal                 UV
+        { {-0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f} }, // Arriba-Izquierda
+        { { 0.5f, -0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f} }, // Arriba-Derecha
+        { { 0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f} }, // Abajo-Derecha
+        { {-0.5f,  0.5f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f} }  // Abajo-Izquierda
       };
 
       std::vector<unsigned int> indices = {
@@ -57,7 +57,24 @@ class Mesh {
       return std::make_shared<Mesh>(vertices, indices);
     }
 
-    // 2. CUBO 3D: Cubo unitario centrado en (0,0,0) con normales para iluminación
+    // 2. QUAD CON ORIGEN EN LA ESQUINA: (Ideal para barras de vida o UI fijas)
+    static std::shared_ptr<Mesh> CreateQuad() {
+      std::vector<Vertex> vertices = {
+        { {0.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f} },
+        { {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 0.0f} },
+        { {1.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {1.0f, 1.0f} },
+        { {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f} }
+      };
+
+      std::vector<unsigned int> indices = {
+        0, 1, 2,
+        2, 3, 0
+      };
+
+      return std::make_shared<Mesh>(vertices, indices);
+    }
+
+    // 3. CUBO 3D: Cubo unitario centrado en (0,0,0) con normales para iluminación
     static std::shared_ptr<Mesh> CreateCube() {
       std::vector<Vertex> vertices = {
         // Cara Frontal (Z = +0.5)

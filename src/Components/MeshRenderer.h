@@ -6,111 +6,75 @@
 #include "ECS/Component.h"
 #include "ECS/GameObject.h"
 #include "Core/Scene.h"
-#include "Core/Shader.h"
-#include "Core/Mesh.h"
-#include "Core/Texture2D.h" // 👈 Incluimos Texture2D
+#include "Graphics/Mesh.h"     // 👈 Graphics
+#include "Graphics/Material.h" // 👈 Graphics
 #include "Components/Camera.h"
 #include "Transform.h"
 
 class MeshRenderer : public Component {
   public:
     std::shared_ptr<Mesh> mesh = nullptr;
-    std::shared_ptr<Texture2D> texture = nullptr; // 👈 Textura opcional
-    glm::vec4 color = glm::vec4(1.0f, 1.0f, 1.0f, 1.0f);
-
+    std::shared_ptr<Material> material = nullptr;
     Transform* transform = nullptr;
+
+    // 👉 CAPA DE ORDEN DE DIBUJADO (Estilo Unity sortingOrder)
+    // Menor número = se dibuja antes (fondo). Mayor número = se dibuja encima (frente).
+    int sortingOrder = 0;
 
     MeshRenderer() = default;
 
-    // Constructor 1: Solo malla y color (usa textura blanca por defecto)
-    MeshRenderer(std::shared_ptr<Mesh> mesh, const glm::vec4& color = glm::vec4(1.0f))
-      : mesh(mesh), color(color), texture(Texture2D::GetWhiteTexture()) {}
+    MeshRenderer(std::shared_ptr<Mesh> mesh, std::shared_ptr<Material> material, int sortingOrder = 0)
+      : mesh(mesh), material(material), sortingOrder(sortingOrder) {}
 
-    // Constructor 2: Malla + Textura + Color de tinte
-    MeshRenderer(std::shared_ptr<Mesh> mesh, std::shared_ptr<Texture2D> texture, const glm::vec4& color = glm::vec4(1.0f))
-      : mesh(mesh), texture(texture), color(color) {}
+    MeshRenderer(std::shared_ptr<Mesh> mesh, const glm::vec4& color = glm::vec4(1.0f), int sortingOrder = 0)
+      : mesh(mesh), material(std::make_shared<Material>(color)), sortingOrder(sortingOrder) {}
 
+    MeshRenderer(std::shared_ptr<Mesh> mesh, std::shared_ptr<Texture2D> texture, const glm::vec4& color = glm::vec4(1.0f), int sortingOrder = 0)
+      : mesh(mesh), material(std::make_shared<Material>(color, texture)), sortingOrder(sortingOrder) {}
+
+    // 👉 AUTO-REGISTRO EN LA ESCENA
     void Init() override {
       transform = gameObject->GetComponent<Transform>();
-      InitDefaultShader();
-      if (!texture) {
-        texture = Texture2D::GetWhiteTexture();
+      if (!material) {
+        material = std::make_shared<Material>();
       }
+    }
+
+    // 👉 SE REGISTRA AL ACTIVARSE
+    void OnEnable() override {
+      if (gameObject && gameObject->scene) {
+        gameObject->scene->RegisterRenderer(this);
+      }
+    }
+
+    // 👉 SE DESREGISTRA AL APAGARSE (Cero carga en la escena mientras duerme en el Pool)
+    void OnDisable() override {
+      if (gameObject && gameObject->scene) {
+        gameObject->scene->UnregisterRenderer(this);
+      }
+    }
+
+    // 👉 AUTO-BAJA AL DESTRUIRSE (RAII)
+    ~MeshRenderer() override {
+      OnDisable();
     }
 
     void Render() override {
-      if (!mesh || !transform || !shader || !gameObject->scene || !gameObject->scene->mainCamera) return;
+      if (!mesh || !material || !transform) return;
 
-      shader->Use();
+      material->Apply();
 
-      // 1. Activar y enlazar textura en el slot 0
-      if (texture) {
-        texture->Bind(0);
-        shader->SetInt("imageTexture", 0);
+      Camera* cam = Camera::GetMain();
+      if (cam != nullptr) {
+        cam->ApplyToShader(material->shader);
+      } else {
+        // 👉 SALVAVIDAS PROFESIONAL: Si la cámara aún no está lista, proyecta en 2D igual
+        glm::mat4 defaultProj = glm::ortho(0.0f, Screen::GetWidthF(), Screen::GetHeightF(), 0.0f, -1000.0f, 1000.0f);
+        material->shader->SetMat4("projection", defaultProj);
+        material->shader->SetMat4("view", glm::mat4(1.0f));
       }
 
-      // 2. Matrices de Cámara
-      Camera* cam = gameObject->scene->mainCamera;
-      shader->SetMat4("projection", cam->GetProjectionMatrix());
-      shader->SetMat4("view", cam->GetViewMatrix());
-
-      // 3. Matriz Modelo
-      glm::mat4 model = glm::mat4(1.0f);
-      model = glm::translate(model, glm::vec3(transform->position.x, transform->position.y, transform->position.z));
-      model = glm::rotate(model, glm::radians(transform->rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
-      model = glm::rotate(model, glm::radians(transform->rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
-      model = glm::rotate(model, glm::radians(transform->rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
-      model = glm::scale(model, glm::vec3(transform->width * transform->scale.x, 
-          transform->height * transform->scale.y, 
-          transform->scale.z));
-
-      shader->SetMat4("model", model);
-      shader->SetVec4("objectColor", color.r, color.g, color.b, color.a);
-
-      // 4. Dibujar
+      material->shader->SetMat4("model", transform->GetWorldMatrix());
       mesh->Draw();
-    }
-
-  private:
-    static inline Shader* shader = nullptr;
-
-    void InitDefaultShader() {
-      if (shader != nullptr) return;
-
-      shader = new Shader();
-
-      const char* vShader = R"(
-        #version 330 core
-        layout (location = 0) in vec3 aPos;
-        layout (location = 1) in vec3 aNormal;
-        layout (location = 2) in vec2 aTexCoords;
-
-        uniform mat4 model;
-        uniform mat4 view;
-        uniform mat4 projection;
-
-        out vec2 TexCoords;
-
-        void main() {
-            gl_Position = projection * view * model * vec4(aPos, 1.0);
-            TexCoords = aTexCoords;
-        }
-      )";
-
-      const char* fShader = R"(
-        #version 330 core
-        in vec2 TexCoords;
-        out vec4 FragColor;
-
-        uniform vec4 objectColor;
-        uniform sampler2D imageTexture;
-
-        void main() {
-            // El color final es la textura multiplicada por el color de tinte
-            FragColor = texture(imageTexture, TexCoords) * objectColor;
-        }
-      )";
-
-      shader->LoadFromSource(vShader, fShader);
     }
 };

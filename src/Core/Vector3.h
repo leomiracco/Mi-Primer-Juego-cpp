@@ -1,5 +1,6 @@
 #pragma once
 #include <cmath>
+#include <algorithm> // 👈 OBLIGATORIO para std::clamp
 
 struct Vector3 {
     float x = 0.0f;
@@ -36,6 +37,14 @@ struct Vector3 {
       x *= scalar; y *= scalar; z *= scalar; return *this;
     }
 
+    // Operadores de igualdad
+    bool operator==(const Vector3& other) const {
+      return x == other.x && y == other.y && z == other.z;
+    }
+    bool operator!=(const Vector3& other) const {
+      return !(*this == other);
+    }
+
     // Longitud del vector (magnitud)
     float Magnitude() const {
       return std::sqrt(x * x + y * y + z * z);
@@ -50,12 +59,43 @@ struct Vector3 {
       return Vector3(0.0f, 0.0f, 0.0f);
     }
 
-    // Constantes estáticas estilo Unity (Vector3.zero, Vector3.up, etc.)
+    // ==============================================================
+    // 🧮 MATEMÁTICA ESTÁNDAR DE LA INDUSTRIA (Unity / Unreal)
+    // ==============================================================
+
+    static float Distance(const Vector3& a, const Vector3& b) {
+      return (a - b).Magnitude();
+    }
+
+    static Vector3 Lerp(const Vector3& a, const Vector3& b, float t) {
+      float clampedT = std::clamp(t, 0.0f, 1.0f); // 👈 Ahora compila perfecto con <algorithm>
+      return a + (b - a) * clampedT;
+    }
+
+    static Vector3 LerpUnclamped(const Vector3& a, const Vector3& b, float t) {
+      return a + (b - a) * t;
+    }
+
+    static float Dot(const Vector3& a, const Vector3& b) {
+      return a.x * b.x + a.y * b.y + a.z * b.z;
+    }
+
+    // 👉 NUEVO: PRODUCTO CRUZ (Esencial para 3D, perpendiculares y vectores directores)
+    static Vector3 Cross(const Vector3& a, const Vector3& b) {
+      return Vector3(
+        a.y * b.z - a.z * b.y,
+        a.z * b.x - a.x * b.z,
+        a.x * b.y - a.y * b.x
+      );
+    }
+
+    // Constantes estáticas útiles
     static Vector3 Zero()    { return Vector3(0.0f, 0.0f, 0.0f); }
     static Vector3 One()     { return Vector3(1.0f, 1.0f, 1.0f); }
-    static Vector3 Up()      { return Vector3(0.0f, -1.0f, 0.0f); } // En 2D SDL, -Y es hacia arriba
+    static Vector3 Up()      { return Vector3(0.0f, -1.0f, 0.0f); }
     static Vector3 Down()    { return Vector3(0.0f, 1.0f, 0.0f); }
     static Vector3 Left()    { return Vector3(-1.0f, 0.0f, 0.0f); }
     static Vector3 Right()   { return Vector3(1.0f, 0.0f, 0.0f); }
-    static Vector3 Forward() { return Vector3(0.0f, 0.0f, 1.0f); } // Eje Z para el futuro 3D
+    static Vector3 Forward() { return Vector3(0.0f, 0.0f, 1.0f); }
+    static Vector3 Back()    { return Vector3(0.0f, 0.0f, -1.0f); }
 };

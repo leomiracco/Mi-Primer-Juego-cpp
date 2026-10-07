@@ -11,24 +11,25 @@ Texture2D::~Texture2D() {
 }
 
 bool Texture2D::LoadFromFile(const std::string& filePath, bool pixelArt) {
-  unsigned char* data = stbi_load(filePath.c_str(), &width, &height, &channels, 0);
+  // 👉 Forzamos '4' (RGBA) para garantizar alineación de memoria perfecta en la GPU
+  unsigned char* data = stbi_load(filePath.c_str(), &width, &height, &channels, 4);
   if (!data) {
     std::cerr << "Error al cargar la textura: " << filePath << std::endl;
     return false;
   }
 
-  GLenum internalFormat = (channels == 4) ? GL_RGBA : GL_RGB;
-  GLenum dataFormat = (channels == 4) ? GL_RGBA : GL_RGB;
+  // Ahora siempre sube como RGBA con 4 bytes por píxel alineados
+  channels = 4;
+  GLenum internalFormat = GL_RGBA;
+  GLenum dataFormat = GL_RGBA;
 
   glGenTextures(1, &ID);
   glBindTexture(GL_TEXTURE_2D, ID);
 
-  // Filtro de textura: NEAREST para Pixel Art, LINEAR para HD
   GLint filter = pixelArt ? GL_NEAREST : GL_LINEAR;
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, filter);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, filter);
 
-  // Evita que los bordes transparentes sangren color
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 

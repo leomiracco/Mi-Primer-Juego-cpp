@@ -2,82 +2,57 @@
 #include <vector>
 #include <memory>
 #include <string>
-#include <SDL.h>
 #include "ECS/GameObject.h"
-#include "Components/BoxCollider.h"
+#include "Core/CollisionSystem.h" // 👈 Delega las físicas a CollisionSystem
 
-// Declaración adelantada de Camera para evitar inclusiones circulares
 class Camera;
+class BoxCollider;
+class MeshRenderer;
 
 class Scene {
   public:
     Scene() = default;
-    virtual ~Scene() = default;
+    virtual ~Scene();
 
     virtual void Init() {}
+    virtual void Update(float deltaTime);
+    virtual void Render();
 
-    virtual void Update(float deltaTime) {
-      // 1. Actualizar todas las entidades vivas
-      for (size_t i = 0; i < gameObjects.size(); ++i) {
-        if (gameObjects[i]->isAlive) {
-          gameObjects[i]->Update(deltaTime);
-        }
-      }
+    GameObject* CreateGameObject(const std::string& name = "GameObject");
 
-      // 👉 2. PASO DE FÍSICA: Chequear colisiones entre colliders activos
-      CheckCollisions();
+    // Delegación limpia de físicas al CollisionSystem
+    void RegisterCollider(BoxCollider* collider) { collisionSystem.Register(collider); }
+    void UnregisterCollider(BoxCollider* collider) { collisionSystem.Unregister(collider); }
 
-      // 3. Limpieza diferida universal: remueve los objetos que murieron en este frame
-      for (auto it = gameObjects.begin(); it != gameObjects.end(); ) {
-        if (!(*it)->isAlive) {
-          it = gameObjects.erase(it);
-        } else {
-          ++it;
-        }
-      }
-    }
+    // Registro de renderers
+    void RegisterRenderer(MeshRenderer* renderer);
+    void UnregisterRenderer(MeshRenderer* renderer);
 
-    virtual void Render() {
-      for (auto& obj : gameObjects) {
+    // Consultas de escena
+    GameObject* FindGameObject(const std::string& name) const;
+    GameObject* FindGameObjectWithTag(const std::string& tag) const;
+    std::vector<GameObject*> FindGameObjectsWithTag(const std::string& tag) const;
+
+    template <typename T>
+    T* FindObjectOfType() const {
+      for (const auto& obj : gameObjects) {
         if (obj->isAlive) {
-          obj->Render();
+          T* comp = obj->GetComponent<T>();
+          if (comp != nullptr) return comp;
         }
       }
+      return nullptr;
     }
 
-    GameObject* CreateGameObject(const std::string& name = "GameObject") {
-      auto newObj = std::make_unique<GameObject>(name);
-      newObj->scene = this;
-      GameObject* rawPtr = newObj.get();
-      gameObjects.push_back(std::move(newObj));
-      return rawPtr;
-    }
-
-    // 👉 Acceso a la cámara principal de la escena (como Camera.main en Unity)
     Camera* mainCamera = nullptr;
 
   protected:
+    CollisionSystem collisionSystem;            // 👈 El motor de físicas vive aquí encapsulado
+    std::vector<MeshRenderer*> activeRenderers;
     std::vector<std::unique_ptr<GameObject>> gameObjects;
+    std::vector<std::unique_ptr<GameObject>> pendingObjects;
+    bool isDestroying = false;
 
   private:
-    void CheckCollisions() {
-      // Comparamos pares únicos para no duplicar trabajo: (i, j) donde j = i + 1
-      for (size_t i = 0; i < gameObjects.size(); ++i) {
-        if (!gameObjects[i]->isAlive) continue;
-        auto* colA = gameObjects[i]->GetComponent<BoxCollider>();
-        if (!colA) continue;
-
-        for (size_t j = i + 1; j < gameObjects.size(); ++j) {
-          if (!gameObjects[j]->isAlive) continue;
-          auto* colB = gameObjects[j]->GetComponent<BoxCollider>();
-          if (!colB) continue;
-
-          // Si colisionan, disparamos el evento en AMBOS objetos
-          if (colA->CheckCollision(*colB)) {
-            gameObjects[i]->OnCollisionEnter(gameObjects[j].get());
-            gameObjects[j]->OnCollisionEnter(gameObjects[i].get());
-          }
-        }
-      }
-    }
+    void IntegratePendingObjects();
 };

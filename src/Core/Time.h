@@ -5,16 +5,19 @@
 
 class Time {
   public:
+    // 👉 REINICIA EL CRONÓMETRO JUSTO ANTES DE ENTRAR AL BUCLE DE JUEGO
+    static void Init() {
+      lastTime = std::chrono::steady_clock::now();
+    }
+
     static void Update() {
       auto currentTime = std::chrono::steady_clock::now();
 
-      // 1. SI EL LIMITADOR ESTÁ ENCENDIDO: Esperamos el tiempo necesario para clavar los FPS
+      // 1. Sincronización híbrida de fotogramas (limitador a 144 Hz)
       if (limitFPS && targetFPS > 0) {
         double targetFrameTimeSec = 1.0 / targetFPS;
         std::chrono::duration<double> elapsedSinceLast = currentTime - lastTime;
 
-        // Espera híbrida de alta precisión: 
-        // Si sobra más de 2ms, cedemos CPU durmiendo 1ms; el resto lo afinamos al microsegundo.
         while (elapsedSinceLast.count() < targetFrameTimeSec) {
           double remainingSec = targetFrameTimeSec - elapsedSinceLast.count();
           if (remainingSec > 0.002) {
@@ -25,38 +28,49 @@ class Time {
         }
       }
 
-      // 2. Calculamos el deltaTime real
+      // 2. Calculamos el tiempo real transcurrido (sin escalar)
       std::chrono::duration<float> elapsed = currentTime - lastTime;
       float rawDelta = elapsed.count();
-      deltaTime = std::min(rawDelta, 0.05f);
+      unscaledDeltaTime = std::min(rawDelta, 0.05f);
 
-      // 3. Calculamos FPS actuales para el menú o diagnóstico
-      if (rawDelta > 0.0f) {
-        currentFPS = static_cast<int>((1.0f / rawDelta) + 0.5f);
+      // 👉 3. CALCULAMOS EL DELTATIME ESCALADO (Afectado por pausa o slow-motion)
+      deltaTime = unscaledDeltaTime * timeScale;
+
+      // 4. Calculamos FPS usando el tiempo REAL (evita división por cero en pausa)
+      if (unscaledDeltaTime > 0.0f) {
+        currentFPS = static_cast<int>((1.0f / unscaledDeltaTime) + 0.5f);
       }
 
       lastTime = currentTime;
     }
 
-    // Consultas estándar de juego
-    static float GetDeltaTime() { return deltaTime; }
+    // 👉 Consultas de DeltaTime
+    static float GetDeltaTime() { return deltaTime; }                   // Usado por personajes y físicas
+    static float GetUnscaledDeltaTime() { return unscaledDeltaTime; }   // Usado por menús y UI
     static int GetFPS() { return currentFPS; }
 
-    // 🎛️ CONTROLES PARA EL FUTURO MENÚ DE OPCIONES
-    // Interruptor ON / OFF (como una casilla en el menú)
+    // 🎛️ CONTROL DE ESCALA DE TIEMPO (Estándar Unity Time.timeScale)
+    static void SetTimeScale(float scale) { timeScale = std::max(0.0f, scale); }
+    static float GetTimeScale() { return timeScale; }
+
+    // Atajos de conveniencia profesional
+    static void Pause() { timeScale = 0.0f; }
+    static void Resume() { timeScale = 1.0f; }
+    static bool IsPaused() { return timeScale == 0.0f; }
+
+    // Controles de tasa de refresco
     static void SetLimitFPS(bool enable) { limitFPS = enable; }
     static bool IsLimitFPSEnabled() { return limitFPS; }
-
-    // Ajuste de tasa objetivo (60, 144, 240, etc.)
     static void SetTargetFPS(int fps) { targetFPS = fps; }
     static int GetTargetFPS() { return targetFPS; }
 
   private:
     static inline std::chrono::steady_clock::time_point lastTime = std::chrono::steady_clock::now();
-    static inline float deltaTime = 0.0f;
+    static inline float unscaledDeltaTime = 0.0f; // Tiempo real
+    static inline float deltaTime = 0.0f;         // Tiempo escalado
+    static inline float timeScale = 1.0f;         // 1.0 = normal, 0.0 = pausa, 0.2 = slow-mo
     static inline int currentFPS = 0;
 
-    // Variables de configuración (con valores por defecto)
     static inline bool limitFPS = true;
     static inline int targetFPS = 144;
 };
